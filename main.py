@@ -9,6 +9,7 @@ from contextlib import contextmanager
 
 import aiofiles
 import aiohttp
+import click
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.expected_conditions import \
@@ -17,8 +18,6 @@ from selenium.webdriver.support.wait import WebDriverWait
 from tqdm import tqdm
 
 SITE = "https://sdarot.tv/watch"
-SHOW = "149-המשרד-ארה-ב-the-office-us"
-SEASONS = list(range(5, 10))
 
 EPISODE_REGEX = re.compile(r'<li data-episode="(\d+)"')
 NUMBER_OF_PARALLEL_MISSIONS = 4
@@ -95,10 +94,10 @@ def run_mission(mission):
     asyncio.new_event_loop().run_until_complete(run_mission_async())
 
 
-async def download():
+async def download(show_id, seasons):
     missions = []
-    for season in SEASONS:
-        season_url = f'{SITE}/{SHOW}/season/{season}'
+    for season in seasons:
+        season_url = f'{SITE}/{show_id}/season/{season}'
         episodes = await get_episodes(season_url)
         season_directory = f'Season_{season}'
 
@@ -118,11 +117,30 @@ async def download():
             progress_bar.update(1)
 
 
-def main():
+@click.command()
+@click.argument('show_id', type=click.INT)
+@click.argument('first_season', type=click.INT)
+@click.argument('last_season', type=click.INT)
+def main(show_id, first_season, last_season):
+    """
+    Download agent from sdarot.tv
+
+    The program receives the `show_id` and seasons range.
+    The `show_id` can be extracted from parameters, like so:
+
+    https://sdarot.tv/watch/{show_id}*
+
+    For example, the following URLs are equivalent:
+    https://sdarot.tv/watch/82-Games of thrones
+
+    https://sdarot.tv/watch/82-ABC
+
+    https://sdarot.tv/watch/82-123
+    """
     if sys.version_info[0] == 3 and sys.version_info[
         1] >= 8 and sys.platform.startswith('win'):
         asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
-    asyncio.run(download())
+    asyncio.run(download(show_id, range(first_season, last_season + 1)))
 
 
 if __name__ == '__main__':
